@@ -1,0 +1,32 @@
+CHECKPOINTS_FOLDER: checkpoints
+DATA_DIR: /content
+ROOT_DIR: /content/uwmgi_repo
+T_0: 25
+T_max: 9425
+WEIGHTS_FOLDER: weights
+backbone: efficientnet-b5
+checkpoint: true
+comment: unet-efficientnet-b5
+debug: true
+device: !!python/object/apply:torch.device
+- cpu
+epochs: 5
+exp_name: 2.5D
+folds:
+- 0
+img_size:
+- 320
+- 320
+lr: 0.002
+min_lr: 1.0e-06
+model_name: Unet
+n_accumulate: 2
+n_fold: 5
+num_classes: 3
+optimizer: Adam
+scheduler: CosineAnnealingLR
+seed: 101
+train_bs: 16
+valid_bs: 32
+warmup_epochs: 0
+wd: 1.0e-06
