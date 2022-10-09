@@ -8,8 +8,7 @@ backbone: efficientnet-b5
 checkpoint: true
 comment: unet-efficientnet-b5
 debug: true
-device: !!python/object/apply:torch.device
-- cpu
+device: cuda:0
 epochs: 5
 exp_name: 2.5D
 folds:

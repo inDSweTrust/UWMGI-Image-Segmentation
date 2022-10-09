@@ -1,8 +1,7 @@
 from torch.optim import lr_scheduler
 
-from cfg import CFG
 
-def fetch_scheduler(optimizer):
+def fetch_scheduler(CFG, optimizer):
     if CFG['scheduler'] == 'CosineAnnealingLR':
         scheduler = lr_scheduler.CosineAnnealingLR(optimizer,T_max=CFG['T_max'], 
                                                    eta_min=CFG['min_lr'])

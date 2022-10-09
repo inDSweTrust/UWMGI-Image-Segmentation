@@ -9,9 +9,6 @@ BCELoss     = smp.losses.SoftBCEWithLogitsLoss()
 LovaszLoss  = smp.losses.LovaszLoss(mode='multilabel', per_image=False)
 TverskyLoss = smp.losses.TverskyLoss(mode='multilabel', log_loss=False)
 
-# BCE + Tversky
-# BCE + Dice
-
 def dice_coef(y_true, y_pred, thr=0.5, dim=(2,3), epsilon=0.001):
     y_true = y_true.to(torch.float32)
     y_pred = (y_pred>thr).to(torch.float32)

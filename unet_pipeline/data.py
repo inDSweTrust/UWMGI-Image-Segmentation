@@ -12,7 +12,6 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import StratifiedKFold, KFold, StratifiedGroupKFold
 
 from utils import load_img, load_msk
-from cfg import CFG
 from transforms import data_transforms
 
 class BuildDataset(torch.utils.data.Dataset):
@@ -49,21 +48,18 @@ class BuildDataset(torch.utils.data.Dataset):
           return torch.tensor(img)
 
 # Create Folds
-def create_folds(input_path, data_path):
-  
-  # path = Path(CFG["DATA_DIR"], 'uwmgi-mask-dataset/train.csv')
+def create_folds(CFG, input_path, data_path):
 
-  df = create_dataframe_w_paths(data_path)
+  df = create_dataframe_w_paths(CFG, data_path)
   skf = StratifiedGroupKFold(n_splits=CFG['n_fold'], shuffle=True, random_state=CFG['seed'])
   
   for fold, (train_idx, val_idx) in enumerate(skf.split(df, df['empty'], groups = df["case"])):
       df.loc[val_idx, 'fold'] = fold
   df.to_csv(Path(input_path, 'train_folds.csv'))
-  # df.to_csv(CFG["DATA_DIR"] + '/uwmgi-mask-dataset/train_folds.csv')
 
 
 # Create dataframe with paths to images and masks
-def create_dataframe_w_paths(data_path):
+def create_dataframe_w_paths(CFG, data_path):
   
   path_df = pd.DataFrame(glob(data_path + '/uwmgi-2.5d-stride2-dataset/images/*'), columns=['image_path'])
   path_df['mask_path'] = path_df.image_path.str.replace('image','mask')
@@ -92,13 +88,12 @@ def create_dataframe_w_paths(data_path):
   return df
 
 
-def prepare_loaders(input_path, data_path, debug=False, fold=0):
+def prepare_loaders(CFG, input_path, data_path, debug=False, fold=0):
 
-  # path = CFG["DATA_DIR"] + '/uwmgi-mask-dataset/train_folds.csv'
   fold_csv_file = os.path.isfile(Path(input_path, 'train_folds.csv'))
   
   if fold_csv_file == False:
-    create_folds(input_path, data_path)
+    create_folds(CFG, input_path, data_path)
 
   df = pd.read_csv(Path(input_path, 'train_folds.csv'))
 

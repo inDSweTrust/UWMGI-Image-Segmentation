@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import torch
-from cfg import CFG
 
 def set_seed(seed = 42):
     '''Sets the seed of the entire notebook so results are the same every time we run.
@@ -25,7 +24,6 @@ def set_seed(seed = 42):
     os.environ['PYTHONHASHSEED'] = str(seed)
     print('> SEEDING DONE')
 
-# Masks
 def id2mask(id_, df):
     idf = df[df['id']==id_]
     wh = idf[['height','width']].iloc[0]
@@ -47,8 +45,6 @@ def gray2rgb(mask):
     rgb_mask = tf.keras.utils.to_categorical(mask, num_classes=4)
     return rgb_mask[..., 1:].astype(mask.dtype)
 
-# Image
-
 def load_img(path):
     img = np.load(path)
     img = img.astype('float32') # original is uint16
@@ -65,9 +61,6 @@ def load_msk(path):
     
 
 def show_img(img, mask=None):
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-#     img = clahe.apply(img)
-#     plt.figure(figsize=(10,10))
     plt.imshow(img, cmap='bone')
     
     if mask is not None:
@@ -78,7 +71,7 @@ def show_img(img, mask=None):
         plt.legend(handles,labels)
     plt.axis('off')
   
-  # RLE 
+# RLE 
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
 def rle_decode(mask_rle, shape):
     '''
@@ -109,15 +102,7 @@ def rle_encode(img):
     runs[1::2] -= runs[::2]
     return ' '.join(str(x) for x in runs)
 
-def create_config():
-  config_folder = Path(CFG["DATA_DIR"], CFG["CHECKPOINTS_FOLDER"])
-  checkpoint_folder.mkdir(exist_ok=True, parents=True)
-  config_string = '''learning_rate:  0.1
-  random_seed: 789108
-  maintainer: Shahin Rostami
-  categories:
-  - hotdog
-  - not a hotdog'''
-
-  with open('cfg.yaml', 'w') as f:
-      f.write(config_string)
+def load_yaml(file_name):
+    with open(file_name, 'r') as stream:
+        cfg = yaml.load(stream, Loader=yaml.SafeLoader)
+    return cfg

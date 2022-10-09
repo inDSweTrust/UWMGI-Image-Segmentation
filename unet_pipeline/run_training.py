@@ -1,3 +1,6 @@
+import argparse
+import yaml
+
 from pickle import NONE
 import numpy as np
 from timm.models.ghostnet import _cfg
@@ -12,41 +15,39 @@ import yaml
 
 import wandb
 
-from cfg import CFG
 from train import Training
 from data import prepare_loaders
 from scheduler import fetch_scheduler
 from train import Training
+from utils import load_yaml
 
 
-def build_model():
-  model = smp.Unet(
-      encoder_name=CFG["backbone"],      # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
-      encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
-      in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
-      classes=CFG['num_classes'],        # model output channels (number of classes in your dataset)
-      activation=None,
+def argparser():
+  parser = argparse.ArgumentParser(description='uwmgi segmentation pipeline')
+  parser.add_argument('CFG_TRAIN', type=str, help='train config path')
+  return parser.parse_args()
+
+def build_model(CFG):
+  model = smp.Unet(encoder_name=CFG["backbone"],   # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
+                   encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
+                   in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
+                   classes=CFG['num_classes'],     # model output channels (number of classes in your dataset)
+                   activation=None,
   )
   model.to(CFG['device'])
   return model
 
-
-def train_fold(fold, train_loader, valid_loader):
+def train_fold(CFG, fold, train_loader, valid_loader):
   print(f'#'*15)
   print(f'### Fold: {fold}')
   print(f'#'*15)
-  # run = wandb.init(project='uwmgi-final', 
-  #                 config={k:v for k, v in dict(vars(CFG)).items() if '__' not in k},
-  #                 anonymous=anonymous,
-  #                 name=f"fold-{fold}|dim-{CFG['img_size'][0]}x{CFG['img_size'][1]}|model-{CFG['model_name']}",
-  #                 group=CFG['comment'],
-  #                 )
+
   checkpoint_folder = Path(CFG["DATA_DIR"], CFG["CHECKPOINTS_FOLDER"])
   checkpoint_folder.mkdir(exist_ok=True, parents=True)
 
-  model = build_model()
+  model = build_model(CFG)
   optimizer = optim.Adam(model.parameters(), lr=CFG['lr'], weight_decay=CFG['wd'])
-  scheduler = fetch_scheduler(optimizer)
+  scheduler = fetch_scheduler(CFG, optimizer)
   device = CFG["device"]
   num_epochs = CFG["epochs"]
 
@@ -63,15 +64,14 @@ def train_fold(fold, train_loader, valid_loader):
   model, history = Training(optimizer,
                             scheduler,
                             device, 
-                            num_epochs
+                            num_epochs, 
+                            CFG
                     ).run_training(model, train_loader, valid_loader, fold)
-  # run.finish()
-  # display(ipd.IFrame(run.url, width=1000, height=720))
 
-def main() -> None:
-  #argparser here for path to config 
-  config_dict = open("/content/uwmgi_repo/unet_pipeline/configs/config.yaml", 'r')
-  CFG = yaml.load(config_dict, yaml.Loader)
+def main():
+  args = argparser()
+  config_folder = Path(args.CFG_TRAIN)
+  CFG = load_yaml(config_folder)
 
   input_path = CFG['ROOT_DIR'] + '/input'
   data_path = CFG['DATA_DIR']
@@ -79,8 +79,8 @@ def main() -> None:
   CFG['device'] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
   for fold in CFG['folds']:
-    train_loader, valid_loader = prepare_loaders(input_path, data_path, debug=CFG['debug'])
-    train_fold(fold, train_loader, valid_loader)
+    train_loader, valid_loader = prepare_loaders(CFG, input_path, data_path, debug=CFG['debug'])
+    train_fold(CFG, fold, train_loader, valid_loader)
 
 if __name__=="__main__":
   main()
