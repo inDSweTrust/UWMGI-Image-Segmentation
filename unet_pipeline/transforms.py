@@ -1,5 +1,4 @@
 import albumentations as A
-from albumentations.augmentations.geometric.resize import Dict
 from albumentations.pytorch import ToTensorV2
 
 
@@ -41,5 +40,6 @@ def augment_dict(CFG):
             ],
             p=1.0,
         ),
+        "test": A.HorizontalFlip(p=1.0),
     }
-    return augment_dict
+    return data_transforms

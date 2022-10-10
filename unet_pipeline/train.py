@@ -1,5 +1,7 @@
 import numpy as np
 import gc
+import argparse
+import yaml
 
 import torch
 import torch.nn as nn
@@ -29,6 +31,7 @@ warnings.filterwarnings("ignore")
 from loss import criterion, dice_coef, iou_coef
 from data import prepare_loaders
 from scheduler import fetch_scheduler
+from utils import load_yaml, build_model
 
 
 class Training(nn.Module):
@@ -208,3 +211,59 @@ class Training(nn.Module):
         model.load_state_dict(best_model_wts)  # load best model weights
 
         return model, history
+
+
+def argparser():
+    parser = argparse.ArgumentParser(description="uwmgi segmentation pipeline")
+    parser.add_argument("CFG_TRAIN", type=str, help="train config path")
+    return parser.parse_args()
+
+
+def train_fold(CFG, fold, train_loader, valid_loader):
+    print(f"#" * 15)
+    print(f"### Fold: {fold}")
+    print(f"#" * 15)
+
+    checkpoint_folder = Path(CFG["DATA_DIR"], CFG["CHECKPOINTS_FOLDER"])
+    checkpoint_folder.mkdir(exist_ok=True, parents=True)
+
+    model = build_model(CFG)
+    optimizer = optim.Adam(model.parameters(), lr=CFG["lr"], weight_decay=CFG["wd"])
+    scheduler = fetch_scheduler(CFG, optimizer)
+    device = CFG["device"]
+    num_epochs = CFG["epochs"]
+
+    checkpoint_file = Path(CFG["CHECKPOINTS_FOLDER"], f"model-checkpoint.pt").is_file()
+
+    if checkpoint_file:
+        checkpoint = torch.load(checkpoint_file)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        epoch = checkpoint["epoch"]
+        loss = checkpoint["loss"]
+
+    model, history = Training(
+        optimizer, scheduler, device, num_epochs, CFG
+    ).run_training(model, train_loader, valid_loader, fold)
+
+
+def main():
+    args = argparser()
+    config_file = Path(args.CFG_TRAIN)
+
+    CFG = load_yaml(config_file)
+
+    input_path = CFG["ROOT_DIR"] + "/input"
+    data_path = CFG["DATA_DIR"]
+
+    CFG["device"] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    for fold in CFG["folds"]:
+        train_loader, valid_loader = prepare_loaders(
+            CFG, input_path, data_path, debug=CFG["debug"]
+        )
+        train_fold(CFG, fold, train_loader, valid_loader)
+
+
+if __name__ == "__main__":
+    main()

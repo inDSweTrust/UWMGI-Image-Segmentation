@@ -120,8 +120,11 @@ def prepare_loaders(CFG, input_path, data_path, debug=False, fold=0):
     if debug:
         train_df = train_df.head(32 * 5).query("empty==0")
         valid_df = valid_df.head(32 * 3).query("empty==0")
-    train_dataset = BuildDataset(train_df, transforms=augment_dict["train"])
-    valid_dataset = BuildDataset(valid_df, transforms=augment_dict["valid"])
+
+    transform_dict = augment_dict(CFG)
+
+    train_dataset = BuildDataset(train_df, transforms=transform_dict["train"])
+    valid_dataset = BuildDataset(valid_df, transforms=transform_dict["valid"])
 
     train_loader = DataLoader(
         train_dataset,
